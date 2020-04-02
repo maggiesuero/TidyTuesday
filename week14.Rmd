@@ -1,0 +1,114 @@
+---
+title: "Beer Production"
+author: "Maggie Suero"
+date: "3/31/2020"
+---
+
+```{r}
+library(tidyverse)
+library(geojsonio)
+library(rgdal)
+library(broom) #tidy spdf
+library(rgeos) #calculate the centroid of each hexagon to add the label
+library(maps)
+library(mapproj)
+library(viridis)
+library(viridisLite)
+```
+Data base from the Alcohol and Tobacco Tax and Trade Bureau (TTB)
+
+```{r}
+#Import the data
+brewing_materials <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/brewing_materials.csv')
+beer_taxed <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/beer_taxed.csv')
+brewer_size <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/brewer_size.csv')
+beer_states <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/beer_states.csv')
+```
+
+Create the Hex 
+```{r}
+# Download the Hex boundaries at geojson format from: https://team.carto.com/u/andrew/tables/andrew.us_states_hexgrid/public/map
+
+# Load the Hex boundaries into the Spatial Polygons Data Frama
+spdf <- geojson_read("DATA/us_states_hexgrid.geojson",  what = "sp")
+
+# Reformating the data
+spdf@data = spdf@data %>%
+  mutate(google_name = gsub(" \\(United States\\)", "", google_name))
+
+# Fortify into a data frame format to be shown with ggplot2
+spdf_fortified <- tidy(spdf, region = "iso3166_2")
+
+# Calculate the centroid of each hexagon to add the label:
+centers <- cbind.data.frame(data.frame(gCentroid(spdf, byid=TRUE), id=spdf@data$iso3166_2))
+
+# Show it
+plot(spdf)
+```
+Add State name
+
+```{r}
+# Merge geospatial and numerical information
+data <- spdf_fortified %>%
+  left_join(beer_states,  by=c("id"="state")) %>%
+  filter(year == "2019", type == "Bottles and Cans") %>% 
+  mutate(Barrels = round(barrels, digits = 0))
+```
+Basic Hex plot
+
+```{r}
+# Plot
+state_name <- spdf_fortified %>% 
+  ggplot() +
+  geom_polygon(data = data, aes(x = long, y = lat, group = group), fill="lavender", color="black") +
+  geom_text(data=centers, aes(x=x, y=y, label=id)) +
+  theme_void() +
+  coord_map()
+
+plot(state_name)
+```
+Customized hexbin choropleth map
+
+```{r}
+ggplot() +
+  geom_polygon(data = data, aes(x = long, y = lat, fill =  Barrels, group = group), size=0, alpha=0.95, color="black") +
+  geom_text(data=centers, aes(x=x, y=y, label=id), color="brown", fontface = "bold")+
+  labs(title = "Beer production by State", 
+       subtitle = "Bottles and Cans in 2019",
+       caption = "Visualization by @G33kyCats")+
+  theme_void() +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 20),
+        plot.subtitle = element_text(hjust = 0.5, size = 16),
+        plot.caption = element_text(face = "italic", size = 11))+
+  #viridis direction: 1 colors are ordered from darkest to lightest, -1 the order is reversed
+  #viridis colormaps: "magma" (or "A"), "inferno" ("B"), "plasma" ("C"), "viridis" ("D"), and "cividis" ("E") 
+  scale_fill_viridis_c(begin = 0.53, end = 1, option = "inferno", direction = 1, trans = "log", na.value = NA) +
+  coord_map()
+```
+
+Another Customized Hexbin Choropleth Map
+```{r}
+
+kegs <- spdf_fortified %>%
+  left_join(beer_states,  by=c("id"="state")) %>%
+  filter(year == "2019", type == "Kegs and Barrels") %>% 
+  mutate(Barrels = round(barrels, digits = 0))
+
+ggplot() +
+  geom_polygon(data = kegs, aes(x = long, y = lat, fill =  barrels, group = group), size=0, alpha=0.8, color="brown") +
+  geom_text(data=centers, aes(x=x, y=y, label=id), color="brown", fontface = "bold")+
+  labs(title = "Beer production by State", 
+       subtitle = "Kegs and Barrels in 2019",
+       caption = "Visualization by @G33kyCats")+
+  theme_void() +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 20),
+        plot.subtitle = element_text(hjust = 0.5, size = 16),
+        plot.caption = element_text(face = "italic", size = 11))+
+  scale_fill_viridis_c(option = "inferno", direction = -1, trans = "log", na.value = NA) +
+  coord_map()
+
+  
+```
+
+This week on Tidy Tuesday I learned how to merge geospatial and numerical information, in other words, how to map the data. I found very useful this site: https://www.r-graph-gallery.com/328-hexbin-map-of-the-usa.html where you have a step by step process.
+I also learned how to use the viridis library (or at least part of it). 
