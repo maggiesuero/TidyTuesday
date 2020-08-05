@@ -8,17 +8,18 @@ date: "3/31/2020"
 library(tidyverse)
 library(geojsonio)
 library(rgdal)
-library(broom) #tidy spdf
-library(rgeos) #calculate the centroid of each hexagon to add the label
+library(broom) # tidy spdf
+library(rgeos) # calculate the centroid of each hexagon to add the label
 library(maps)
 library(mapproj)
 library(viridis)
 library(viridisLite)
+library(scales)
 ```
 Data base from the Alcohol and Tobacco Tax and Trade Bureau (TTB)
 
 ```{r}
-#Import the data
+# Import the data
 brewing_materials <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/brewing_materials.csv')
 beer_taxed <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/beer_taxed.csv')
 brewer_size <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/brewer_size.csv')
@@ -72,14 +73,15 @@ Customized hexbin choropleth map
 ```{r}
 ggplot() +
   geom_polygon(data = data, aes(x = long, y = lat, fill =  Barrels, group = group), size=0, alpha=0.95, color="black") +
-  geom_text(data=centers, aes(x=x, y=y, label=id), color="brown", fontface = "bold")+
+  geom_text(data=centers, aes(x=x, y=y, label=id), color="brown", fontface = "bold") +
+  scale_x_continuous(labels = comma) +
   labs(title = "Beer production by State", 
        subtitle = "Bottles and Cans in 2019",
-       caption = "Visualization by @G33kyCats")+
+       caption = "Visualization by @G33kyCats") +
   theme_void() +
   theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 20),
         plot.subtitle = element_text(hjust = 0.5, size = 16),
-        plot.caption = element_text(face = "italic", size = 11))+
+        plot.caption = element_text(face = "italic", size = 11, colour = "grey50"))+
   #viridis direction: 1 colors are ordered from darkest to lightest, -1 the order is reversed
   #viridis colormaps: "magma" (or "A"), "inferno" ("B"), "plasma" ("C"), "viridis" ("D"), and "cividis" ("E") 
   scale_fill_viridis_c(begin = 0.53, end = 1, option = "inferno", direction = 1, trans = "log", na.value = NA) +
@@ -96,14 +98,15 @@ kegs <- spdf_fortified %>%
 
 ggplot() +
   geom_polygon(data = kegs, aes(x = long, y = lat, fill =  barrels, group = group), size=0, alpha=0.8, color="brown") +
-  geom_text(data=centers, aes(x=x, y=y, label=id), color="brown", fontface = "bold")+
+  geom_text(data=centers, aes(x=x, y=y, label=id), color="brown", fontface = "bold") +
+  scale_x_continuous(labels = comma) +
   labs(title = "Beer production by State", 
        subtitle = "Kegs and Barrels in 2019",
-       caption = "Visualization by @G33kyCats")+
+       caption = "Visualization by @G33kyCats") +
   theme_void() +
   theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 20),
         plot.subtitle = element_text(hjust = 0.5, size = 16),
-        plot.caption = element_text(face = "italic", size = 11))+
+        plot.caption = element_text(face = "italic", size = 11, colour = "grey50")) +
   scale_fill_viridis_c(option = "inferno", direction = -1, trans = "log", na.value = NA) +
   coord_map()
 
