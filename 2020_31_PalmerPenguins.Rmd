@@ -1,0 +1,87 @@
+---
+title: "TidyTuesday 2020 - Week31 - Palmer Penguins "
+author: "Maggie Suero"
+date: "10/6/2020"
+output: github_document
+---
+
+#*Palmer Penguins*
+
+The data for the week 31 - 2020, were collected and made available by [Dr. Kristen Gorman](https://www.uaf.edu/cfos/people/faculty/detail/kristen-gorman.php) and the Palmer Station, Antarctica LTER. 
+The palmerpenguins R package desciption is available [here](https://cran.r-project.org/web/packages/palmerpenguins/palmerpenguins.pdf).
+
+```{r}
+citation("palmerpenguins")
+```
+
+```{r setup}
+#Get the packages  
+library(ggplot2)
+library(dplyr)
+library(ggtext)
+library(GGally) # Extension to ggplot2 for correlation matrix
+library(scales) # Skips scientific notation 
+library(magick) # Allows advanced Image-Processing
+library(here) # Allows the script run without a working directory
+library(magrittr) # Allows piping the logo
+
+```
+
+```{r dataset}
+
+# Load the data
+penguins <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-28/penguins.csv')
+
+penguins <- penguins %>% 
+  na.omit(penguins)
+
+```
+
+```{r plot}
+penguins_plot <- ggpairs(data = penguins, aes(color = species, alpha = 0.8),
+        columns = c("body_mass_g", "flipper_length_mm", "bill_length_mm")) +
+  scale_y_continuous(labels = comma) +
+  scale_fill_manual(values = c("darkorange","purple","cyan4")) +
+  scale_color_manual(values = c("darkorange","purple","cyan4")) +
+  labs(title = "Penguin size, Palmer Station LTER",
+       subtitle = "Body mass, flipper & bill length for  <span style = 'color: darkorange;'>Adélie</span>, <span style = 'color: purple;'>Chinstrap</span> & <span style = 'color: cyan4;'>Gentoo</span> Penguins",
+       caption = "Visualization by @G33kyCats") +
+  theme_minimal() +  
+  theme(plot.title = element_text(face = "bold", size = 17),
+        plot.subtitle = element_markdown(), 
+        plot.caption = element_text(face = "italic", size = 10, colour = "grey50")) 
+ 
+penguins_plot
+```
+
+```{r}
+# Save the file
+ggsave(filename = paste0(here("/"), last_plot()$labels$title, "penguins_plot.png"), width = 7, height = 6)
+
+```
+
+```{r}
+# Call back the plot
+plot <- image_read(paste0(here("/"), "penguins_plot.png"))
+
+#Get the logo
+logo_raw <- image_read("https://raw.githubusercontent.com/allisonhorst/palmerpenguins/master/man/figures/lter_penguins.png") 
+```
+
+```{r}
+# Customizing the logo 
+logo <- logo_raw %>%
+  image_scale("500") %>%   
+  image_background("grey70", flatten = TRUE) %>%
+  image_border("grey70", "600x10") %>%
+  image_annotate("Artwork by @allison_horst", color = "white", size = 35,
+                 location = "+50+40", gravity = "SouthEast")
+
+# Stack the logo on top of the plot
+final_plot <- image_append(image_scale(c(plot, logo), "1000"), stack = TRUE)
+
+image_write(final_plot, paste0(here("/"), last_plot()$labels$title, "PalmerPenguins.png"))
+```
+
+This [Stackoverflow](https://stackoverflow.com/questions/9917049/inserting-an-image-to-ggplot2) question was my solution on how I could insert the lovely penguins into the ggplot.
+
